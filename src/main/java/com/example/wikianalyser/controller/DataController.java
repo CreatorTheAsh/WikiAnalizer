@@ -1,5 +1,6 @@
 package com.example.wikianalyser.controller;
 
+import com.example.wikianalyser.model.JSONParser;
 import com.example.wikianalyser.model.XMLParser;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -11,6 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.concurrent.Flow;
 
 @Controller
 public class DataController {
@@ -22,15 +24,63 @@ public class DataController {
                 .get().uri("https://uk.wikipedia.org/w/api.php?" +
                         "action=feedrecentchanges")
                 .retrieve().bodyToFlux(String.class)
+                .take(100)
+                .delaySubscription(Duration.ofSeconds(3))
+                .repeat()
                 .reduce("", (s1, s2) -> s1 + s2)
                 .map(s -> XMLParser.parse(s));
         return stringFlux;
     }
+
+    @GetMapping(path = "/recentActivity&username={username}",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public Mono<String> getUserActivity(@PathVariable final String username) {
+        return WebClient.create()
+                .get().uri("https://uk.wikipedia.org/w/api.php?" +
+                        "action=query&format=json&list=usercontribs&ucuser=" + username)
+                .retrieve().bodyToFlux(String.class)
+                .delaySubscription(Duration.ofSeconds(3))
+                .reduce("", (s1, s2) -> s1 + s2)
+                .map(s -> JSONParser.parse(s));
+                //.repeat();
+    }
+
+    @GetMapping(path = "/userStats&username={username}",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public Mono<String> getUserStatistics(@PathVariable final String username) {
+        return WebClient.create()
+                .get().uri("https://uk.wikipedia.org/w/api.php?" +
+                        "action=query&format=json&list=usercontribs&ucuser=" + username)
+                .retrieve().bodyToFlux(String.class)
+                .delaySubscription(Duration.ofSeconds(3))
+                .reduce("", (s1, s2) -> s1 + s2)
+                .map(s -> JSONParser.getStats(s));
+        //.repeat();
+    }
+
+    @GetMapping(path = "/mostActiveUser",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public Flux<String> getMostActiveUser() {
         return WebClient.create()
                 .get().uri("https://en.wikipedia.org/w/api.php?" +
                         "action=feedrecentchanges&limit=3")
                 .retrieve().bodyToFlux(String.class)
-                .delaySubscription(Duration.ofSeconds(5))
-                .repeat();
+                .delaySubscription(Duration.ofSeconds(5));
+        //.repeat();
+    }
+
+    @GetMapping(path = "/topTenTopics",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public Flux<String> getTopTenTopics() {
+        return WebClient.create()
+                .get().uri("https://en.wikipedia.org/w/api.php?" +
+                        "action=feedrecentchanges&limit=3")
+                .retrieve().bodyToFlux(String.class)
+                .delaySubscription(Duration.ofSeconds(5));
+        //.repeat();
     }
 }
