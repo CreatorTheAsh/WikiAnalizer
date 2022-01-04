@@ -23,6 +23,18 @@ public class JSONParser {
         return builder.toString();
     }
 
+    public static String parseChanges(String json) {
+        JSONObject obj = new JSONObject(json);
+        String title = (String) obj.get("title");
+        String timeStamp = (String) obj.getJSONObject("meta").get("dt");
+        String user = (String) obj.get("user");
+        StringBuilder builder = new StringBuilder();
+        builder.append("title: " + title + " | " +
+                "timestamp: " + timeStamp + " | " + "user: " +
+                user + "                                               ");
+        return builder.toString();
+    }
+
     public static String getStats(String json) {
         JSONObject obj = new JSONObject(json);
         JSONArray array = obj.getJSONObject("query").getJSONArray("usercontribs");

@@ -22,20 +22,22 @@ public class DataController {
 
     @GetMapping(path = "/recentChangesstreaming")
     @ResponseBody
-    public Flux<ServerSentEvent<String>> getRecentChanges() {
+    public Flux<String> getRecentChanges() {
         WebClient client = WebClient.create("https://stream.wikimedia.org/v2");
         ParameterizedTypeReference<ServerSentEvent<String>> type
                 = new ParameterizedTypeReference<>() {};
 
-        Flux<ServerSentEvent<String>> eventStream = client.get()
+        Flux<String> eventStream = client.get()
                 .uri("/stream/recentchange")
                 .retrieve()
                 .bodyToFlux(type)
                 .delaySubscription(Duration.ofSeconds(5))
                 .take(2)
-                .repeat();
+                .takeLast(1)
+                .repeat()
+                .map(s -> JSONParser.parseChanges(s.data()));
         eventStream.subscribe(
-                content -> System.out.println("gregreg"),
+                content -> System.out.println("ok"),
                 error -> System.out.println("error"),
                 () -> System.out.println("complete"));
         return eventStream;
